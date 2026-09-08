@@ -262,13 +262,20 @@ Create `docs/rag-build-log.md` in the target repo and define the first use case.
 ### Scope Questions
 
 - What document collection should the system answer from?
-  - Examples: product docs, internal policies, course notes, legal documents, support tickets.
+
+The targeted knowledge base is a collection of articles that predict football outcomes based on features. It can contain good features but also the best performing models. When we talk about football it is the real football. Not American football. 
+
 - Who will ask questions?
-  - Examples: customers, employees, developers, students, analysts.
+
+The questions will be asked by researchers with a data science background. 
+
 - What should the system be allowed to use?
-  - Only the indexed documents, or also general model knowledge?
+
+The system should only return footbal related questions. Any non football related questions should be politely be rejected.
+
 - What should the system not answer?
-  - Examples: private data, legal advice, medical advice, questions outside the document set.
+
+private data, legal advice, medical advice, questions outside the document set.
 
 ### First Evaluation Questions
 
