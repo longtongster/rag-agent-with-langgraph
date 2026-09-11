@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated local vector database (keep only the directory placeholder)
+data/vectorstore/*
+!data/vectorstore/.gitkeep

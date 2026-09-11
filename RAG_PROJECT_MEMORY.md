@@ -125,11 +125,11 @@ Use these questions at the start of each step. They are prompts for scoping, imp
 ### 3. Add Evaluation Early
 
 - What are 10-20 realistic user questions?
-- Which questions should be curated by a human, and which can be generated synthetically from chunks?
+- Which questions should be curated, generated synthetically from sampled passages, or later collected from real usage?
 - For each question, which source document or passage should be found?
 - Which questions should produce a refusal or uncertainty?
-- How will generated questions be tied back to the source chunk they came from?
-- How will chunk hashes or document versions prevent regenerating questions for unchanged chunks?
+- How will generated questions retain provenance to their source document, page, section, and passage?
+- How will document and passage hashes identify stale evaluation examples when sources change?
 - What retrieval metrics matter first: recall@k, precision@k, MRR, or something else?
 - What answer behaviors should be scored: groundedness, completeness, citation quality, tone?
 - What score is good enough to move to the next iteration?
@@ -201,7 +201,8 @@ Use these questions at the start of each step. They are prompts for scoping, imp
 │   └── reports/
 ├── data/
 │   ├── raw/
-│   └── processed/
+│   ├── processed/
+│   └── vectorstore/       # Generated local vector index; not committed
 ├── src/
 │   ├── ingest/
 │   ├── retrieval/
@@ -209,6 +210,8 @@ Use these questions at the start of each step. They are prompts for scoping, imp
 │   └── evaluation/
 └── tests/
 ```
+
+During local development, store the persistent vector database under `data/vectorstore/`. Treat it as a generated, rebuildable index and exclude its contents from Git. Keep extracted chunks and metadata in `data/processed/` as the inspectable source used to rebuild that index. If the project later uses a hosted vector database, only its configuration belongs in the repository.
 
 ## Token-Cost Discipline
 
@@ -263,15 +266,16 @@ Create `docs/rag-build-log.md` in the target repo and define the first use case.
 
 - What document collection should the system answer from?
 
-The targeted knowledge base is a collection of articles that predict football outcomes based on features. It can contain good features but also the best performing models. When we talk about football it is the real football. Not American football. 
+The targeted knowledge base is a collection of articles that predict football outcomes based on features. It can contain good features but also the best performing models. When we talk about football it is the real football. Not American football. This will most likely be scientific articles. I expect this to be generally pdf files. 
+
 
 - Who will ask questions?
 
-The questions will be asked by researchers with a data science background. 
+The questions will be asked by researchers with a data science background. These people know about statistics and machine learning.  
 
 - What should the system be allowed to use?
 
-The system should only return footbal related questions. Any non football related questions should be politely be rejected.
+The system should answer only football-related questions supported by the indexed document collection. It must politely reject unrelated questions and state when the collection lacks sufficient evidence.
 
 - What should the system not answer?
 
@@ -292,33 +296,41 @@ The goal is to reveal what retrieval must find and what answer behavior is expec
 
 ### Synthetic Evaluation Questions
 
-Synthetic questions can help cover more of the document set without requiring a human to read every document.
+Synthetic questions can broaden coverage without requiring a human to read every document. Do not generate several questions for every small chunk: this is costly and tends to create repetitive, unnatural evaluation data.
 
 Use this workflow:
 
-- Generate questions from a specific chunk or small group of chunks.
-- Store the source chunk as the expected evidence.
+- Start with a small set of realistic, generic questions representing actual research tasks.
+- Sample meaningful passages or sections across documents, using stratified sampling when document types or topics differ.
+- Generate a limited pool of candidate questions from those sampled passages. For the initial five-paper collection, target roughly 20–30 candidates in total rather than questions for every chunk.
+- Store the source document, page, section, and passage as expected evidence.
+- Automatically reject malformed, trivial, duplicate, and near-duplicate questions.
+- Keep questions that cover distinct topics, documents, difficulty levels, and answer behaviours.
+- Manually inspect only a small representative sample and important failures.
 - Ask the RAG system the generated question.
-- Check whether retrieval finds the same chunk or a nearby relevant source.
+- Check whether retrieval finds the expected passage or another genuinely relevant source.
 - Judge whether the answer is grounded in the retrieved evidence.
+- Add real user questions and production failures to the dataset once they become available.
 
 Store enough metadata to avoid repeating work:
 
 - Document ID.
 - Document version or document hash.
-- Chunk ID.
-- Chunk text hash.
+- Page, section, and passage or chunk ID.
+- Passage or chunk text hash.
 - Generated questions.
-- Expected source chunk.
+- Expected evidence.
 - Generation timestamp.
+- Origin (`curated`, `synthetic`, or `production`).
+- Review status.
 
 Use this rule for incremental updates:
 
-- If the chunk hash already exists, reuse its questions.
-- If the chunk hash is new, generate questions.
-- If the chunk changed, regenerate questions or mark the old questions as stale.
+- If the source passage is unchanged, keep its existing evaluation examples.
+- If a sampled passage is new and improves coverage, generate candidate questions for it.
+- If a source passage changes, regenerate its questions or mark the existing examples as stale.
 
-Synthetic questions are useful for broad coverage, but they are not a replacement for a small human-reviewed golden set.
+Synthetic questions are useful for coverage, but they are not a replacement for a small curated set. The evaluation dataset should eventually combine curated questions, filtered synthetic questions, and representative questions or failures from real usage.
 
 ### Good Answer Behavior
 
