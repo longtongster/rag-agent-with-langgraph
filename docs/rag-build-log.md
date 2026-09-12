@@ -73,6 +73,7 @@ Expected evidence will be attached after PDF extraction. Synthetic evaluation wi
 - An initial set of ten cross-document evaluation questions has been drafted.
 - The evaluation approach has been set: combine generic curated questions with filtered synthetic questions from sampled passages, then add real usage cases later.
 - Local vector indexes will be persisted under `data/vectorstore/`. Their generated contents are ignored by Git and can be rebuilt from `data/processed/`.
+- Notebooks will be used for iterative exploration and analysis. Reusable implementation code will remain in `src/` and be imported into notebooks.
 - No baseline RAG implementation has been started.
 
 ## Next Steps

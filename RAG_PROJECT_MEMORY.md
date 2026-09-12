@@ -10,6 +10,7 @@ Use the conversation for decisions and iteration, but keep durable memory in the
 - Track evaluation data and results in files.
 - Use commits or explicit checkpoints after meaningful improvements.
 - Prefer measurable improvements over subjective prompt tweaking.
+- Use notebooks for exploration and analysis, but move reusable pipeline logic into tested modules under `src/`.
 
 ## Memory Files
 
@@ -203,15 +204,19 @@ Use these questions at the start of each step. They are prompts for scoping, imp
 │   ├── raw/
 │   ├── processed/
 │   └── vectorstore/       # Generated local vector index; not committed
+├── notebooks/             # Exploration and analysis; imports reusable code from src/
 ├── src/
-│   ├── ingest/
-│   ├── retrieval/
-│   ├── generation/
-│   └── evaluation/
+│   └── rag_agent/
+│       ├── ingest/
+│       ├── retrieval/
+│       ├── generation/
+│       └── evaluation/
 └── tests/
 ```
 
 During local development, store the persistent vector database under `data/vectorstore/`. Treat it as a generated, rebuildable index and exclude its contents from Git. Keep extracted chunks and metadata in `data/processed/` as the inspectable source used to rebuild that index. If the project later uses a hosted vector database, only its configuration belongs in the repository.
+
+Use `notebooks/` for iterative investigation, visual inspection, and experiments. Keep production and reusable code in `src/`, import that code into notebooks, and cover it with tests so results do not depend on hidden notebook state.
 
 ## Token-Cost Discipline
 
