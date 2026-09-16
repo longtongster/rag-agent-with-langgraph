@@ -149,6 +149,8 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
 .envrc
 .venv
 env/
@@ -220,3 +222,18 @@ __marimo__/
 # Generated local vector database (keep only the directory placeholder)
 data/vectorstore/*
 !data/vectorstore/.gitkeep
+
+# Local source documents and generated processed corpus
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Generated notebook data exports
+notebooks/*.jsonl
+
+# Operating-system and editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

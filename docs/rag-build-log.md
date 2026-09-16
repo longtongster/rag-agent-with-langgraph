@@ -2,7 +2,7 @@
 
 ## Current Goal
 
-Build the minimal PDF extraction and chunking pipeline for the five selected papers.
+Complete and verify the baseline ingestion pipeline for the five selected papers.
 
 ### Paper-Search Prompt
 
@@ -74,13 +74,22 @@ Expected evidence will be attached after PDF extraction. Synthetic evaluation wi
 - The evaluation approach has been set: combine generic curated questions with filtered synthetic questions from sampled passages, then add real usage cases later.
 - Local vector indexes will be persisted under `data/vectorstore/`. Their generated contents are ignored by Git and can be rebuilt from `data/processed/`.
 - Notebooks will be used for iterative exploration and analysis. Reusable implementation code will remain in `src/` and be imported into notebooks.
-- No baseline RAG implementation has been started.
+- The project uses a conventional installable package under `src/rag_agent/`.
+- The ingestion pipeline loads PDFs, performs conservative text cleaning, creates token-based chunks, adds document and chunk provenance metadata, validates the combined corpus, and writes deterministic JSONL.
+- Pipeline progress uses module-level logging; application-level logging configuration will be added with the CLI.
+- The current test suite contains 21 passing tests covering PDF loading, cleaning, chunk metadata, validation, and JSONL serialization.
+- An end-to-end smoke run produced 208 JSONL chunks across all five source documents.
+- Direct tests for `chunk_documents()` and the `ingest_documents()` orchestration function are still missing.
+- One PDF emitted an XObject extraction warning, so a small output sample should be inspected before treating ingestion as complete.
+- Embedding, vector indexing, retrieval, and answer generation have not started.
 
 ## Next Steps
 
-1. Build the minimal PDF extraction and chunking pipeline with document, page, section, and passage metadata.
-2. Sample meaningful passages across the five papers.
-3. Generate roughly 20–30 synthetic candidate questions in total.
-4. Deduplicate and filter the candidates, then inspect a small representative sample.
-5. Store each retained question with its expected evidence and provenance.
-6. Build and evaluate the minimal baseline retriever and answer-generation pipeline.
+1. Add direct tests for `chunk_documents()` and `ingest_documents()`.
+2. Run the verified workflow to create `data/processed/chunks.jsonl`.
+3. Confirm five unique documents and 208 chunks, then inspect a small sample from each PDF for extraction quality.
+4. Sample meaningful passages across the five papers.
+5. Generate roughly 20–30 synthetic candidate questions in total.
+6. Deduplicate and filter the candidates, then inspect a small representative sample.
+7. Store each retained question with its expected evidence and provenance.
+8. Build and evaluate the minimal embedding and retrieval baseline.

@@ -258,14 +258,19 @@ If this file has been copied into a new repository, start by creating:
 
 ## Current Status
 
-- No implementation has been started yet.
-- The agreed approach is to build step by step.
-- Evaluation should be added early, before optimizing retrieval or prompts.
-- The repo should be the durable memory, not the chat history.
+- The use case is scoped around evidence-grounded research over scientific PDFs about professional men's association-football prediction.
+- Five initial PDFs are available in `data/raw/`.
+- A baseline ingestion pipeline now loads, conservatively cleans, token-chunks, annotates, validates, and saves the corpus as JSONL.
+- The implementation uses an installable `src/rag_agent/` package, module-level logging, notebooks for exploration, and pytest for automated tests.
+- A real-corpus smoke run produced 208 chunks across five documents.
+- Evaluation should be added before optimizing retrieval or prompts.
+- The repository remains the durable memory rather than the chat history.
 
 ## Next Recommended Step
 
-Create `docs/rag-build-log.md` in the target repo and define the first use case. These questions are not asking for perfect final answers yet. They are meant to clarify scope and create the first rough evaluation set.
+Complete the ingestion checkpoint by adding direct tests for `chunk_documents()` and `ingest_documents()`, then create the final processed corpus at `data/processed/chunks.jsonl`. Confirm the five-document/208-chunk result and inspect a small sample for extraction quality before starting synthetic evaluation generation.
+
+## Established Use Case and Evaluation Plan
 
 ### Scope Questions
 
