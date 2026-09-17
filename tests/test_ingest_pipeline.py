@@ -293,3 +293,101 @@ def test_save_chunks_jsonl_accepts_string_path_and_empty_input(tmp_path):
 
     assert output_path.exists()
     assert output_path.read_text(encoding="utf-8") == ""
+
+
+@pytest.mark.parametrize("size,overlap", [(0, 0), (-1, 0), (16, -1), (16, 16), (16, 17)])
+def test_chunk_documents_rejects_invalid_sizes(size, overlap):
+    with pytest.raises(ValueError):
+        pipeline.chunk_documents([], chunk_size=size, chunk_overlap=overlap)
+
+
+def test_chunk_documents_preserves_content_provenance_and_order():
+    import tiktoken
+
+    pages = [
+        Document(page_content="alpha beta gamma delta " * 30, metadata={"page": 0, "document_id": "a"}),
+        Document(page_content="second page", metadata={"page": 1, "document_id": "a"}),
+    ]
+    original = [page.model_copy(deep=True) for page in pages]
+    chunks = pipeline.chunk_documents(pages, chunk_size=16, chunk_overlap=0)
+    encoder = tiktoken.get_encoding("cl100k_base")
+
+    assert len(chunks) > len(pages)
+    assert all(0 < len(encoder.encode(chunk.page_content)) <= 16 for chunk in chunks)
+    assert [chunk.metadata["page"] for chunk in chunks] == sorted(chunk.metadata["page"] for chunk in chunks)
+    for page in pages:
+        page_chunks = [chunk for chunk in chunks if chunk.metadata["page"] == page.metadata["page"]]
+        assert all(chunk.metadata == page.metadata for chunk in page_chunks)
+        assert " ".join(chunk.page_content for chunk in page_chunks).split() == page.page_content.split()
+    assert pages == original
+    assert chunks == pipeline.chunk_documents(pages, chunk_size=16, chunk_overlap=0)
+
+
+def test_chunk_documents_supports_overlap_and_empty_pages():
+    page = Document(page_content=" ".join(["alpha"] * 40), metadata={"page": 0})
+    without_overlap = pipeline.chunk_documents([page], chunk_size=10, chunk_overlap=0)
+    with_overlap = pipeline.chunk_documents([page], chunk_size=10, chunk_overlap=3)
+    assert sum(len(c.page_content.split()) for c in without_overlap) == 40
+    assert sum(len(c.page_content.split()) for c in with_overlap) > 40
+    assert pipeline.chunk_documents([], chunk_size=10, chunk_overlap=3) == []
+    assert pipeline.chunk_documents([Document(page_content="  \n")], chunk_size=10, chunk_overlap=3) == []
+
+
+def test_ingest_documents_saves_deterministic_valid_corpus(tmp_path, monkeypatch):
+    # Fake only extraction; exercise cleaning, splitting, provenance and saving.
+    for name in ["b.pdf", "a.pdf", "ignored.txt"]:
+        (tmp_path / name).write_text("fixture")
+    loaded = []
+
+    def load(path):
+        loaded.append(path.name)
+        return [Document(page_content="  Football\tﬁndings\r\n", metadata={
+            "filename": path.name, "document_id": path.stem,
+            "document_hash": path.stem, "page": 0,
+        })]
+
+    monkeypatch.setattr(pipeline, "load_pdf", load)
+    output = tmp_path / "chunks.jsonl"
+    report = pipeline.ingest_documents(tmp_path, output, chunk_size=512, chunk_overlap=50)
+    assert loaded == ["a.pdf", "b.pdf"]
+    assert report["valid"] and report["saved"]
+    assert report["document_count"] == 2
+    assert report["total_chunks"] == 2
+    assert report["failed_files"] == report["errors"] == []
+    records = [json.loads(line) for line in output.read_text().splitlines()]
+    assert all(record["page_content"] == "Football findings" for record in records)
+    assert pipeline.validate_chunks([Document(**record) for record in records])["valid"]
+    first = output.read_bytes()
+    pipeline.ingest_documents(tmp_path, output, chunk_size=512, chunk_overlap=50)
+    assert output.read_bytes() == first
+
+
+@pytest.mark.parametrize("failure", [ValueError("no text"), OSError("cannot read"), pipeline.PyPdfError("broken PDF")])
+def test_ingest_documents_reports_failure_and_preserves_existing_output(tmp_path, monkeypatch, failure):
+    for name in ["a.pdf", "b.pdf"]:
+        (tmp_path / name).write_text("fixture")
+
+    def load(path):
+        if path.name == "a.pdf":
+            raise failure
+        return [Document(page_content="Useful evidence", metadata={
+            "filename": path.name, "document_id": "b", "document_hash": "b", "page": 0,
+        })]
+
+    monkeypatch.setattr(pipeline, "load_pdf", load)
+    output = tmp_path / "chunks.jsonl"
+    output.write_text("previous corpus")
+    report = pipeline.ingest_documents(tmp_path, output, chunk_size=512, chunk_overlap=50)
+    assert not report["valid"] and not report["saved"]
+    assert report["processed_files"] == ["b.pdf"]
+    assert report["failed_files"] == [{"filename": "a.pdf", "error": str(failure)}]
+    assert any("a.pdf" in error for error in report["errors"])
+    assert output.read_text() == "previous corpus"
+
+
+def test_ingest_documents_rejects_empty_corpus(tmp_path):
+    output = tmp_path / "chunks.jsonl"
+    report = pipeline.ingest_documents(tmp_path, output, chunk_size=512, chunk_overlap=50)
+    assert not report["valid"] and not report["saved"]
+    assert "No chunks found" in report["errors"]
+    assert not output.exists()

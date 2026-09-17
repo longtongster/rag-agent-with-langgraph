@@ -12,6 +12,10 @@ Use the conversation for decisions and iteration, but keep durable memory in the
 - Prefer measurable improvements over subjective prompt tweaking.
 - Use notebooks for exploration and analysis, but move reusable pipeline logic into tested modules under `src/`.
 
+## Collaboration Preference
+
+The user leads this learning project. Discuss next steps and tradeoffs before generating code or changing files, and wait for their go-ahead. When the user implements a function, review it without rewriting it unless asked. Keep explanations concise. Do not require reading whole papers or manually scanning the corpus to create evaluation evidence.
+
 ## Memory Files
 
 Use `RAG_PROJECT_MEMORY.md` as the stable project guide. It should describe the overall approach, preferred ecosystem, build steps, evaluation philosophy, production-readiness themes, and how to resume the project later. Update it only when the project direction, principles, or structure changes.
@@ -259,16 +263,16 @@ If this file has been copied into a new repository, start by creating:
 ## Current Status
 
 - The use case is scoped around evidence-grounded research over scientific PDFs about professional men's association-football prediction.
-- Five initial PDFs are available in `data/raw/`.
+- Four distinct papers are available in `data/raw/` after replacing a post-match-focused paper and removing a duplicate manuscript.
 - A baseline ingestion pipeline now loads, conservatively cleans, token-chunks, annotates, validates, and saves the corpus as JSONL.
 - The implementation uses an installable `src/rag_agent/` package, module-level logging, notebooks for exploration, and pytest for automated tests.
-- A real-corpus smoke run produced 208 chunks across five documents.
+- The verified ingestion run produced `data/processed/chunks.jsonl` with 162 chunks across four documents. The last test run passed 33 tests; report persistence and the CLI still need dedicated checks. Extraction and source-scope caveats are recorded in the build log.
 - Evaluation should be added before optimizing retrieval or prompts.
 - The repository remains the durable memory rather than the chat history.
 
 ## Next Recommended Step
 
-Complete the ingestion checkpoint by adding direct tests for `chunk_documents()` and `ingest_documents()`, then create the final processed corpus at `data/processed/chunks.jsonl`. Confirm the five-document/208-chunk result and inspect a small sample for extraction quality before starting synthetic evaluation generation.
+Start the next session by discussing automatic passage sampling and the candidate-question format, before writing code. Sample meaningful passages across the four papers, generate roughly 20–30 synthetic candidate questions in total with source provenance, and automatically filter duplicates and weak candidates. The user reviews only a small representative sample and important failures. Keep the ten broad curated questions; attach evidence later using retrieval-assisted review. See `docs/rag-build-log.md` for current results and implementation follow-ups.
 
 ## Established Use Case and Evaluation Plan
 
@@ -312,7 +316,7 @@ Use this workflow:
 
 - Start with a small set of realistic, generic questions representing actual research tasks.
 - Sample meaningful passages or sections across documents, using stratified sampling when document types or topics differ.
-- Generate a limited pool of candidate questions from those sampled passages. For the initial five-paper collection, target roughly 20–30 candidates in total rather than questions for every chunk.
+- Generate a limited pool of candidate questions from those sampled passages. For the current four-paper collection, target roughly 20–30 candidates in total rather than questions for every chunk.
 - Store the source document, page, section, and passage as expected evidence.
 - Automatically reject malformed, trivial, duplicate, and near-duplicate questions.
 - Keep questions that cover distinct topics, documents, difficulty levels, and answer behaviours.

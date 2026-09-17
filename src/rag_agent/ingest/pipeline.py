@@ -11,7 +11,7 @@ import logging
 import re
 import unicodedata
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
@@ -333,12 +333,32 @@ def save_chunks_jsonl(chunks: list[Document], output_path: Path) -> None:
             file.write(json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n")
 
 
+def save_ingestion_report(report: dict[str, Any], output_path: str | Path) -> None:
+    """Save an ingestion report as JSON with deterministically sorted keys.
+
+    Overwrite an existing file. The destination's parent directory must exist.
+
+    Args:
+        report: JSON-serializable ingestion summary, including any errors.
+        output_path: Destination for the JSON report.
+
+    Raises:
+        TypeError: If the report contains values that cannot be JSON serialized.
+        OSError: If the destination cannot be opened or written.
+    """
+    output_path = Path(output_path)
+    report_json = json.dumps(report, sort_keys=True, indent=2, ensure_ascii=False)
+    with output_path.open(mode="w", encoding="utf-8") as file:
+        file.write(report_json)
+
+
 def ingest_documents(
     input_dir: Path,
     output_path: Path,
     *,
     chunk_size: int,
     chunk_overlap: int,
+    report_path: Path | None = None
 ) -> dict[str, Any]:
     """Run the complete ingestion pipeline for every PDF in a directory.
 
@@ -352,6 +372,7 @@ def ingest_documents(
         output_path: Destination for the processed JSONL dataset.
         chunk_size: Maximum target chunk size passed to ``chunk_documents``.
         chunk_overlap: Chunk overlap passed to ``chunk_documents``.
+        report_path: Destination for the ingestion report.
 
     Returns:
         A report summarizing processed files, generated chunks, warnings,
@@ -422,4 +443,56 @@ def ingest_documents(
             "Ingestion validation failed with %d errors", len(report["errors"])
         )
 
+    if report_path is not None:
+        save_ingestion_report(report, report_path)
+    
     return report
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Ingest PDFs into a chunked JSONL dataset."
+    )
+    parser.add_argument(
+        "input-dir",
+        type=Path,
+        help="Directory containing source PDF files.",
+    )
+    parser.add_argument(
+        "output-path",
+        type=Path,
+        help="Destination for the processed JSONL dataset.",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=512,
+        help="Maximum target chunk size (default: 512).",
+    )
+    parser.add_argument(
+        "--chunk-overlap",
+        type=int,
+        default=50,
+        help="Chunk overlap (default: 50).",
+    )
+    parser.add_argument(
+        "--report-path",
+        type=Path,
+        default=None,
+        help="Destination for the ingestion report (optional).",
+    )
+
+    args = parser.parse_args()
+
+    report = ingest_documents(
+        input_dir=args.input_dir,
+        output_path=args.output_path,
+        chunk_size=args.chunk_size,
+        chunk_overlap=args.chunk_overlap,
+        report_path=args.report_path,
+    )
+
+    if not report["valid"]:
+        logger.error("Ingestion completed with errors. See report for details.")
