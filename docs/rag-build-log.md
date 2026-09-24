@@ -2,7 +2,9 @@
 
 ## Current Goal
 
-Agree on automatic passage sampling and the synthetic candidate-question format before implementation. Use the verified four-paper corpus and keep manual review small.
+Complete random passage sampling and define the synthetic candidate-question format. The preceding chunk-screening milestone is complete. Detailed work for this phase is tracked in `docs/dataset-build-log.md`.
+
+This goal concerns only the new synthetic question set. The ten broad curated questions below are an existing, separate set of multi-document research questions. They are kept for later retrieval-assisted evidence collection and answer evaluation; they are not inputs to the current passage-sampling step.
 
 ### Paper-Search Prompt
 
@@ -81,15 +83,19 @@ Expected evidence will be attached after PDF extraction. Synthetic evaluation wi
 - The latest ingestion run produced 162 JSONL chunks across four source documents, with valid/saved true and no reported validation errors or failed files.
 - Direct chunking and orchestration tests now pass, including invalid settings, deterministic output, provenance, overlap, empty input, and extraction failures that preserve an existing corpus.
 - The corpus exists at `data/processed/chunks.jsonl`: four documents and 162 chunks using 512-token chunks and 50-token overlap. Sampled text is usable with extraction caveats recorded below.
+- All 162 chunks have been screened in the notebook and saved as 162 JSONL records in `data/processed/screened_chunks.jsonl`; `data/processed/chunks.jsonl` remains unchanged.
+- Each screened record has two top-level keys: the original `chunk` and a separate `screening` object containing automatic `status`/`flags`, `knowledge_base_decision`, `sampling_decision`, and `review_note`.
+- Automatic screening produced 151 `eligible`, 6 `exclude`, and 5 `review` records. Manual review confirmed an additional reference chunk, retained one substantive passage, and excluded publisher metadata and two contextless table chunks from synthetic-question sampling.
+- Final screening decisions retain 155 chunks for the future knowledge base and 152 chunks for the synthetic sampling pool.
 - Embedding, vector indexing, retrieval, and answer generation have not started.
 
 ## Next Steps
 
-1. Discuss automatic passage sampling and the candidate-question schema with the user before generating code. Do not ask the user to read four articles or scan 162 chunks.
-2. Automatically sample meaningful methods, features, validation, and results passages across all four papers; exclude cover sheets and references. Preserve pre-match/post-match qualifiers and avoid evidence requiring visual interpretation.
+1. Randomly sample approximately one in six chunks from the 152 records with `sampling_decision: include`, using and recording a fixed random seed.
+2. Inspect the sampled document distribution and selected passages; only revise the simple random approach if the result is clearly inadequate.
 3. Generate roughly 20–30 synthetic candidate questions in total from sampled passages. Retain source document/page/chunk identifiers, document/text hashes, generation timestamp, origin, and review status, together with expected evidence.
 4. Automatically reject malformed, weak, duplicate, and near-duplicate candidates. The user reviews a small representative sample and important failures.
-5. Keep the ten broad curated research questions. Attach evidence later with retrieval-assisted review; do not make manual labeling of all ten a prerequisite for synthetic generation.
+5. Keep the ten broad curated research questions separate from the synthetic set. Do not attach evidence to them or manually label the corpus yet; do that later with retrieval-assisted review.
 6. Build and evaluate the minimal embedding and retrieval baseline.
 
 ## Session Wrap-up — 2026-09-17

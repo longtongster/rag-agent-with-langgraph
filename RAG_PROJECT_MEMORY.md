@@ -267,12 +267,14 @@ If this file has been copied into a new repository, start by creating:
 - A baseline ingestion pipeline now loads, conservatively cleans, token-chunks, annotates, validates, and saves the corpus as JSONL.
 - The implementation uses an installable `src/rag_agent/` package, module-level logging, notebooks for exploration, and pytest for automated tests.
 - The verified ingestion run produced `data/processed/chunks.jsonl` with 162 chunks across four documents. The last test run passed 33 tests; report persistence and the CLI still need dedicated checks. Extraction and source-scope caveats are recorded in the build log.
+- The first synthetic-dataset milestone is complete: all 162 chunks were screened in `notebooks/synthetic-dataset-chunk-checks.ipynb` and saved to `data/processed/screened_chunks.jsonl`. The original `chunks.jsonl` remains unchanged. Each derived record contains the original `chunk` plus a separate `screening` object with automatic status/flags and final knowledge-base and sampling decisions.
+- Screening retained 155 chunks for the future knowledge base and 152 chunks for synthetic-question sampling. Reference lists were excluded; publisher metadata and contextless tables were retained for the knowledge base but excluded from sampling where identified during review.
 - Evaluation should be added before optimizing retrieval or prompts.
 - The repository remains the durable memory rather than the chat history.
 
 ## Next Recommended Step
 
-Start the next session by discussing automatic passage sampling and the candidate-question format, before writing code. Sample meaningful passages across the four papers, generate roughly 20–30 synthetic candidate questions in total with source provenance, and automatically filter duplicates and weak candidates. The user reviews only a small representative sample and important failures. Keep the ten broad curated questions; attach evidence later using retrieval-assisted review. See `docs/rag-build-log.md` for current results and implementation follow-ups.
+Randomly sample approximately one in six chunks from the 152-chunk sampling pool in `data/processed/screened_chunks.jsonl`, using and recording a fixed random seed. Then define the candidate-question format and generate roughly 20–30 synthetic candidates with source provenance. Automatically filter malformed, weak, duplicate, and near-duplicate candidates; review only a small representative sample and important failures. Keep the ten broad curated questions separate and attach their evidence later using retrieval-assisted review.
 
 ## Established Use Case and Evaluation Plan
 
@@ -312,10 +314,12 @@ The goal is to reveal what retrieval must find and what answer behavior is expec
 
 Synthetic questions can broaden coverage without requiring a human to read every document. Do not generate several questions for every small chunk: this is costly and tends to create repetitive, unnatural evaluation data.
 
+The synthetic questions are distinct from the ten curated research questions. The synthetic set is generated first from sampled passages and is mainly used for controlled, passage-based retrieval and grounding checks. The ten curated questions are broader, mostly multi-document synthesis questions; they already exist and are not part of the passage-sampling step. Their supporting evidence will be attached later with retrieval-assisted review, rather than by manually labeling the full corpus.
+
 Use this workflow:
 
 - Start with a small set of realistic, generic questions representing actual research tasks.
-- Sample meaningful passages or sections across documents, using stratified sampling when document types or topics differ.
+- Randomly sample from chunks whose screening decision allows synthetic-question sampling. Record the random seed and inspect the resulting document distribution; do not introduce stratified or content-weighted sampling unless the simple random sample proves inadequate.
 - Generate a limited pool of candidate questions from those sampled passages. For the current four-paper collection, target roughly 20–30 candidates in total rather than questions for every chunk.
 - Store the source document, page, section, and passage as expected evidence.
 - Automatically reject malformed, trivial, duplicate, and near-duplicate questions.
