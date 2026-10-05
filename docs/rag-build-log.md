@@ -2,9 +2,9 @@
 
 ## Current Goal
 
-Complete random passage sampling and define the synthetic candidate-question format. The preceding chunk-screening milestone is complete. Detailed work for this phase is tracked in `docs/dataset-build-log.md`.
+Build a minimal end-to-end RAG baseline from the existing processed chunks, then use the ten curated cross-paper questions below to check retrieval and grounded answers. The user will implement the code; `notebooks/rag-baseline-build.ipynb` is the step-by-step Markdown guide. The four-paper corpus is sufficient for a prototype, but it may not support every broad question. Record unsupported or partial answers as corpus-coverage findings, not automatically as RAG failures.
 
-This goal concerns only the new synthetic question set. The ten broad curated questions below are an existing, separate set of multi-document research questions. They are kept for later retrieval-assisted evidence collection and answer evaluation; they are not inputs to the current passage-sampling step.
+The synthetic-question dataset is optional and is not a prerequisite for starting the RAG. Its preparation history remains in `docs/dataset-build-log.md`; return to it only if passage-level retrieval diagnostics prove useful.
 
 ### Paper-Search Prompt
 
@@ -66,14 +66,14 @@ These generic questions will test retrieval and synthesis across the initial pap
 > 9. Which features are most suitable for an XGBoost football match prediction model?
 > 10. What are the main limitations of current football match prediction approaches?
 
-Expected evidence will be attached after PDF extraction. Synthetic evaluation will sample meaningful passages across the collection and generate roughly 20–30 candidates in total—not several questions for every chunk. Candidates will be deduplicated and filtered, with only a small representative sample and important failures reviewed manually.
+Use these ten questions as the initial evaluation set. For each run, retain the question, retrieved chunks with document/page provenance, generated answer, and a lightweight review: answerable/partially answerable/unsupported by the current corpus; evidence relevance; factual grounding; citation quality. Do not require complete gold answers or per-paper fiches before building the baseline. Add synthetic passage-level cases only if they help diagnose retrieval failures.
 
 ## Current Status
 
 - The initial use case has been scoped in `RAG_PROJECT_MEMORY.md`.
 - Four distinct PDF papers remain in `data/raw/`; the post-match-focused Frontiers paper and the duplicate manuscript have been removed.
 - An initial set of ten cross-document evaluation questions has been drafted.
-- The evaluation approach has been set: combine generic curated questions with filtered synthetic questions from sampled passages, then add real usage cases later.
+- The initial evaluation approach is to run the ten curated cross-paper questions against the RAG baseline. Synthetic passage questions are optional diagnostics, not a prerequisite.
 - Local vector indexes will be persisted under `data/vectorstore/`. Their generated contents are ignored by Git and can be rebuilt from `data/processed/`.
 - Notebooks will be used for iterative exploration and analysis. Reusable implementation code will remain in `src/` and be imported into notebooks.
 - The project uses a conventional installable package under `src/rag_agent/`.
@@ -91,12 +91,20 @@ Expected evidence will be attached after PDF extraction. Synthetic evaluation wi
 
 ## Next Steps
 
-1. Randomly sample approximately one in six chunks from the 152 records with `sampling_decision: include`, using and recording a fixed random seed.
-2. Inspect the sampled document distribution and selected passages; only revise the simple random approach if the result is clearly inadequate.
-3. Generate roughly 20–30 synthetic candidate questions in total from sampled passages. Retain source document/page/chunk identifiers, document/text hashes, generation timestamp, origin, and review status, together with expected evidence.
-4. Automatically reject malformed, weak, duplicate, and near-duplicate candidates. The user reviews a small representative sample and important failures.
-5. Keep the ten broad curated research questions separate from the synthetic set. Do not attach evidence to them or manually label the corpus yet; do that later with retrieval-assisted review.
-6. Build and evaluate the minimal embedding and retrieval baseline.
+1. Implement embeddings and a persistent local vector store from `data/processed/chunks.jsonl`, preserving document and page metadata.
+2. Implement a retriever and run a few questions to inspect relevance and cross-paper source coverage.
+3. Add grounded answer generation with citations to the retrieved paper and page; include an explicit insufficient-evidence behavior.
+4. Run the ten curated questions, save retrievals and answers, and mark each as answerable, partially answerable, or unsupported by these four papers.
+5. Use the observed failures to choose one retrieval or prompting improvement and compare against the same questions.
+
+Do not block baseline implementation on regenerating the synthetic question set, creating paper summaries, or manually reading all papers.
+
+## Session: Scope reset to RAG baseline — 2026-10-02
+
+- The current objective is a straightforward RAG build. Earlier discussion had drifted into a separate per-paper evidence extraction/literature synthesis workflow; that is not a prerequisite and is out of the immediate scope.
+- The ten curated questions remain the initial cross-paper evaluation set. Four papers are enough to build and exercise a prototype; coverage may be partial. Evaluation must distinguish retrieval/generation errors from missing or incomparable evidence in the corpus.
+- The user wants to write the implementation code themselves. Added `notebooks/rag-baseline-build.ipynb` as a verbose Markdown-only coding guide, covering the baseline from processed chunks through retrieval, cited generation, and a lightweight evaluation loop.
+- The earlier `cross-paper-gold-question-pilot.ipynb` direction was too focused on evidence fiches and was replaced by the RAG build guide.
 
 ## Session Wrap-up — 2026-09-17
 

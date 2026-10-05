@@ -14,7 +14,7 @@ Use the conversation for decisions and iteration, but keep durable memory in the
 
 ## Collaboration Preference
 
-The user leads this learning project. Discuss next steps and tradeoffs before generating code or changing files, and wait for their go-ahead. When the user implements a function, review it without rewriting it unless asked. Keep explanations concise. Do not require reading whole papers or manually scanning the corpus to create evaluation evidence.
+The user is learning by implementing the code themselves. Explain the next practical step and provide notebook guidance when asked; do not implement code on their behalf unless explicitly requested. Keep the project focused on building a working RAG baseline before adding research-analysis workflows. The user does not need to read every paper or manually label every chunk. When the user implements a function, review it without rewriting it unless asked.
 
 ## Memory Files
 
@@ -38,33 +38,13 @@ Use the LangChain, LangGraph, and LangSmith ecosystem as much as practical:
 
 ## Target Build Path
 
-1. Define the use case
-   - Target users
-   - Document sources
-   - Answer style
-   - Latency and cost constraints
-   - Security, privacy, and access-control needs
-   - Important failure modes
+1. Build a minimal end-to-end RAG baseline from the existing processed chunk corpus: embeddings, a persistent local vector store, retrieval, grounded answer generation, and source/page citations.
+2. Run the ten curated cross-paper gold questions against that baseline. Record retrieved sources and answers, then judge relevance, factual support, citation quality, and whether the four-paper corpus has enough evidence. Mark questions as answerable, partially answerable, or unsupported; corpus gaps are not automatically retrieval failures.
+3. Improve one measured failure at a time (for example, retrieval depth, chunking, hybrid search, query rewriting, or answer instructions) and compare against the same questions.
+4. Add synthetic passage-level evaluation examples only if they help diagnose retrieval behavior. They are optional support for the baseline, not a prerequisite for building it.
+5. Consider LangGraph orchestration, reranking, and production hardening only when the baseline and evaluation show a concrete need.
 
-2. Build a baseline RAG system
-   - Document loading
-   - Cleaning and normalization
-   - Chunking
-   - Embeddings
-   - Vector store
-   - Retriever
-   - Answer generation
-   - Source citations
-
-3. Add evaluation early
-   - Golden question set
-   - Synthetic questions generated from known source chunks
-   - Expected supporting documents or passages
-   - Retrieval metrics: recall@k, precision@k, MRR
-   - Answer metrics: groundedness, faithfulness, completeness, citation quality
-   - Regression tests for future changes
-
-4. Improve retrieval
+### Later: improve retrieval
    - Chunk size and overlap experiments
    - Metadata filters
    - Hybrid search
@@ -72,20 +52,20 @@ Use the LangChain, LangGraph, and LangSmith ecosystem as much as practical:
    - Multi-query retrieval
    - Parent-child document retrieval
 
-5. Add reranking
+### Later: add reranking
    - Cross-encoder reranker or LLM-based reranker
    - Tune candidate count before reranking
    - Tune final context count after reranking
    - Measure quality, latency, and cost tradeoffs
 
-6. Improve answer quality
+### Later: improve answer quality
    - Prompt hardening
    - Citation enforcement
    - Refusal behavior when evidence is weak
    - Structured output where useful
    - Tests for hallucination-prone cases
 
-7. Production hardening
+### Later: production hardening
    - Observability and tracing
    - Feedback capture
    - Caching
@@ -96,7 +76,7 @@ Use the LangChain, LangGraph, and LangSmith ecosystem as much as practical:
    - Latency monitoring
    - Deployment and rollback plan
 
-8. Continuous evaluation
+### Later: continuous evaluation
    - Offline evals before deploy
    - Online feedback review
    - Canary or A/B testing
@@ -127,18 +107,14 @@ Use these questions at the start of each step. They are prompts for scoping, imp
 - How many chunks should be retrieved for the baseline?
 - How will answers show citations?
 
-### 3. Add Evaluation Early
+### 3. Evaluate The Baseline
 
-- What are 10-20 realistic user questions?
-- Which questions should be curated, generated synthetically from sampled passages, or later collected from real usage?
-- For each question, which source document or passage should be found?
-- Which questions should produce a refusal or uncertainty?
-- How will generated questions retain provenance to their source document, page, section, and passage?
-- How will document and passage hashes identify stale evaluation examples when sources change?
-- What retrieval metrics matter first: recall@k, precision@k, MRR, or something else?
-- What answer behaviors should be scored: groundedness, completeness, citation quality, tone?
-- What score is good enough to move to the next iteration?
-- How will eval results be saved and compared, preferably with LangSmith datasets and experiment runs?
+- Do the ten curated cross-paper questions retrieve relevant evidence from the current four-paper corpus?
+- Which retrieved papers/pages support each answer, and which questions have insufficient corpus evidence?
+- Are answers grounded, appropriately qualified, and cited to the right pages?
+- Can answerability be recorded as answerable, partially answerable, or unsupported?
+- Which failed cases are retrieval failures, generation failures, or simply corpus coverage gaps?
+- What small change can be tested against the same questions?
 
 ### 4. Improve Retrieval
 
@@ -250,7 +226,7 @@ Future conversations can then focus on one topic file at a time, which keeps con
 In a future session, say:
 
 ```text
-Continue from RAG_PROJECT_MEMORY.md. Read the current build log and help me with the next step.
+Continue from RAG_PROJECT_MEMORY.md. Read the current build log and help me implement the next RAG-baseline step in the notebook.
 ```
 
 If this file has been copied into a new repository, start by creating:
@@ -267,14 +243,16 @@ If this file has been copied into a new repository, start by creating:
 - A baseline ingestion pipeline now loads, conservatively cleans, token-chunks, annotates, validates, and saves the corpus as JSONL.
 - The implementation uses an installable `src/rag_agent/` package, module-level logging, notebooks for exploration, and pytest for automated tests.
 - The verified ingestion run produced `data/processed/chunks.jsonl` with 162 chunks across four documents. The last test run passed 33 tests; report persistence and the CLI still need dedicated checks. Extraction and source-scope caveats are recorded in the build log.
-- The first synthetic-dataset milestone is complete: all 162 chunks were screened in `notebooks/synthetic-dataset-chunk-checks.ipynb` and saved to `data/processed/screened_chunks.jsonl`. The original `chunks.jsonl` remains unchanged. Each derived record contains the original `chunk` plus a separate `screening` object with automatic status/flags and final knowledge-base and sampling decisions.
-- Screening retained 155 chunks for the future knowledge base and 152 chunks for synthetic-question sampling. Reference lists were excluded; publisher metadata and contextless tables were retained for the knowledge base but excluded from sampling where identified during review.
-- Evaluation should be added before optimizing retrieval or prompts.
+- Current v2 screening is complete: 162 records are saved in `data/processed/screened_chunks_v2_prompt.jsonl` and `data/processed/reviewed_screened_chunks_v2_prompt.jsonl`. The original `chunks.jsonl` remains unchanged. Each derived record contains the original chunk plus `content_type`, `categories`, `knowledge_base_recommendation`, `sampling_recommendation`, `evidence_quotes`, and `rationale` under `screening`.
+- The current v2 recommendations include 142 chunks for the knowledge base and 138 for question sampling; 20 and 24 are respectively excluded. The automatic and reviewed v2 files are currently identical.
+- The passage-question prompt and Pydantic response schema have been refined on individual examples. Their focus is candidate predictive-feature inventories, how features are constructed from data, reported evidence for predictive performance, and model comparisons. A feature being mentioned or used is not evidence that it is best; performance claims stay tied to the study’s task, dataset, and metric.
+- An initial 25-passage sample and preliminary synthetic candidate batch are saved in `data/processed/synthetic_dataset.jsonl`. This optional passage-level evaluation work is parked while the RAG baseline is built; no embeddings, vector index, or retrieval evaluation have run yet.
+- `notebooks/rag-baseline-build.ipynb` provides the current Markdown-only coding guide. The immediate next step is implementing the end-to-end baseline, then exercising it with the ten curated questions.
 - The repository remains the durable memory rather than the chat history.
 
 ## Next Recommended Step
 
-Randomly sample approximately one in six chunks from the 152-chunk sampling pool in `data/processed/screened_chunks.jsonl`, using and recording a fixed random seed. Then define the candidate-question format and generate roughly 20–30 synthetic candidates with source provenance. Automatically filter malformed, weak, duplicate, and near-duplicate candidates; review only a small representative sample and important failures. Keep the ten broad curated questions separate and attach their evidence later using retrieval-assisted review.
+Implement the first end-to-end RAG baseline by following `notebooks/rag-baseline-build.ipynb`: load processed chunks with provenance, create embeddings and a persistent local index, retrieve passages, and generate cited answers. Then run the ten curated cross-paper questions and record answerability and failures. The four-paper collection is a prototype corpus and may not support every question.
 
 ## Established Use Case and Evaluation Plan
 
@@ -282,7 +260,7 @@ Randomly sample approximately one in six chunks from the 152-chunk sampling pool
 
 - What document collection should the system answer from?
 
-The targeted knowledge base is a collection of articles that predict football outcomes based on features. It can contain good features but also the best performing models. When we talk about football it is the real football. Not American football. This will most likely be scientific articles. I expect this to be generally pdf files. 
+The target collection is scientific research about real association-football match-outcome prediction. The RAG system should help researchers identify candidate and empirically strong predictive features, understand how to construct features from data (especially public data), and compare model families and reported performance. A model or feature that performs best in one study must remain tied to that study’s task, dataset, metric, and validation; do not present it as universally best.
 
 
 - Who will ask questions?
@@ -310,45 +288,9 @@ For each question, capture:
 
 The goal is to reveal what retrieval must find and what answer behavior is expected.
 
-### Synthetic Evaluation Questions
+### Synthetic Evaluation Questions (Optional)
 
-Synthetic questions can broaden coverage without requiring a human to read every document. Do not generate several questions for every small chunk: this is costly and tends to create repetitive, unnatural evaluation data.
-
-The synthetic questions are distinct from the ten curated research questions. The synthetic set is generated first from sampled passages and is mainly used for controlled, passage-based retrieval and grounding checks. The ten curated questions are broader, mostly multi-document synthesis questions; they already exist and are not part of the passage-sampling step. Their supporting evidence will be attached later with retrieval-assisted review, rather than by manually labeling the full corpus.
-
-Use this workflow:
-
-- Start with a small set of realistic, generic questions representing actual research tasks.
-- Randomly sample from chunks whose screening decision allows synthetic-question sampling. Record the random seed and inspect the resulting document distribution; do not introduce stratified or content-weighted sampling unless the simple random sample proves inadequate.
-- Generate a limited pool of candidate questions from those sampled passages. For the current four-paper collection, target roughly 20–30 candidates in total rather than questions for every chunk.
-- Store the source document, page, section, and passage as expected evidence.
-- Automatically reject malformed, trivial, duplicate, and near-duplicate questions.
-- Keep questions that cover distinct topics, documents, difficulty levels, and answer behaviours.
-- Manually inspect only a small representative sample and important failures.
-- Ask the RAG system the generated question.
-- Check whether retrieval finds the expected passage or another genuinely relevant source.
-- Judge whether the answer is grounded in the retrieved evidence.
-- Add real user questions and production failures to the dataset once they become available.
-
-Store enough metadata to avoid repeating work:
-
-- Document ID.
-- Document version or document hash.
-- Page, section, and passage or chunk ID.
-- Passage or chunk text hash.
-- Generated questions.
-- Expected evidence.
-- Generation timestamp.
-- Origin (`curated`, `synthetic`, or `production`).
-- Review status.
-
-Use this rule for incremental updates:
-
-- If the source passage is unchanged, keep its existing evaluation examples.
-- If a sampled passage is new and improves coverage, generate candidate questions for it.
-- If a source passage changes, regenerate its questions or mark the existing examples as stale.
-
-Synthetic questions are useful for coverage, but they are not a replacement for a small curated set. The evaluation dataset should eventually combine curated questions, filtered synthetic questions, and representative questions or failures from real usage.
+A preliminary 25-passage sample and candidate batch exist, but synthetic-question generation is parked while the baseline is built. The ten curated cross-paper questions are the initial eval set. Return to synthetic examples only if they help diagnose a measured passage-retrieval problem; they are not a gate for indexing, retrieval, or answer generation.
 
 ### Good Answer Behavior
 

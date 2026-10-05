@@ -8,6 +8,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "fonttools>=4.65.0",
     "langchain>=1.4.0",
+    "langchain-chroma>=1.1.0",
     "langchain-community>=0.4.2",
     "langchain-openai>=1.6.2",
     "langchain-text-splitters>=1.1.2",
@@ -15,6 +16,7 @@ dependencies = [
     "pypdf>=6.18.1",
     "pytest>=9.1.1",
     "tiktoken>=0.14.0",
+    "tqdm>=4.70.1",
 ]
 
 [build-system]

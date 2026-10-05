@@ -456,12 +456,12 @@ if __name__ == "__main__":
         description="Ingest PDFs into a chunked JSONL dataset."
     )
     parser.add_argument(
-        "input-dir",
+        "input_dir",
         type=Path,
         help="Directory containing source PDF files.",
     )
     parser.add_argument(
-        "output-path",
+        "output_path",
         type=Path,
         help="Destination for the processed JSONL dataset.",
     )

@@ -1,0 +1,16 @@
+{
+  "document_count": 4,
+  "errors": [],
+  "failed_files": [],
+  "output_path": "../data/processed/delete.jsonl",
+  "processed_files": [
+    "2024156785.pdf",
+    "a263-Article Text-847-2-10-20231219.pdf",
+    "s10994-018-5704-6.pdf",
+    "s10994-024-06625-9.pdf"
+  ],
+  "saved": true,
+  "total_chunks": 162,
+  "valid": true,
+  "warnings": []
+}
